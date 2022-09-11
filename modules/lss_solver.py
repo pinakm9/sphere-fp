@@ -20,7 +20,7 @@ class LogSteadyStateSolver:
         return tf.split(X, self.dim, axis=1)
 
     def loss(self, *args):
-        return tf.reduce_mean(self.diff_op_log(self.net, *args)**2)
+        return tf.reduce_mean(self.diff_log_op(self.net, *args)**2)
 
     @tf.function
     def train_step(self, *args):

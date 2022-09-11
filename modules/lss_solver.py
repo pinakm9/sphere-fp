@@ -34,14 +34,14 @@ class LogSteadyStateSolver:
         args = self.sampler(n_sample)
         print("{:>6}{:>12}{:>18}".format('Epoch', 'Loss', 'Runtime(s)'))
         start = time.time()
-        with open('train_log.csv', 'a+') as logger:
+        with open('{}/train_log.csv'.format(), 'w') as logger:
             writer = csv.writer(logger)
             for epoch in range(epochs):
                 L = self.train_step(*args)
                 if epoch % 10 == 0:
-                    step_details = [epoch, L, time.time()-start]
+                    step_details = [epoch, L.numpy(), time.time()-start]
                     print('{:6d}{:12.6f}{:18.4f}'.format(*step_details))
                     writer.writerow(step_details)
                     args = self.sampler(n_sample)
                     self.net.save_weights('{}/{}'.format(save_folder, self.net.name))
-            writer.close()
+            

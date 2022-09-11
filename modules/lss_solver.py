@@ -34,7 +34,7 @@ class LogSteadyStateSolver:
         args = self.sampler(n_sample)
         print("{:>6}{:>12}{:>18}".format('Epoch', 'Loss', 'Runtime(s)'))
         start = time.time()
-        with open('{}/train_log.csv'.format(), 'w') as logger:
+        with open('{}/train_log.csv'.format(save_folder), 'w') as logger:
             writer = csv.writer(logger)
             for epoch in range(epochs):
                 L = self.train_step(*args)

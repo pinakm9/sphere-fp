@@ -15,8 +15,10 @@ class LogSteadyStateSolver:
         self.dtype = dtype
         self.optimizer = optimizer 
 
-    def sampler(self, n_sample):
-        X = tf.random.uniform(shape=(n_sample, 2), minval=self.domain[0], maxval=self.domain[1], dtype=self.dtype)
+    def sampler(self, n_sample, domain=None):
+        if domain is None:
+            domain = self.domain
+        X = tf.random.uniform(shape=(n_sample, 2), minval=domain[0], maxval=domain[1], dtype=self.dtype)
         return tf.split(X, self.dim, axis=1)
 
     def loss(self, *args):

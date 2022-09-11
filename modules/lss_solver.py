@@ -30,7 +30,7 @@ class LogSteadyStateSolver:
         self.optimizer.apply_gradients(zip(grads, self.net.trainable_weights))
         return L
 
-    def learn(self, epochs=10000, n_sample=1000):
+    def learn(self, epochs=10000, n_sample=1000, save_folder='data'):
         args = self.sampler(n_sample)
         print("{:>6}{:>12}{:>18}".format('Epoch', 'Loss', 'Runtime(s)'))
         start = time.time()
@@ -43,3 +43,5 @@ class LogSteadyStateSolver:
                     print('{:6d}{:12.6f}{:18.4f}'.format(*step_details))
                     writer.writerow(step_details)
                     args = self.sampler(n_sample)
+                    self.net.save_weights('{}/{}'.format(save_folder, self.net.name))
+            writer.close()

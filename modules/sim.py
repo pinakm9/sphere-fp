@@ -285,6 +285,12 @@ class MCProb:
         plt.savefig('{}/p_slice_{}_{}_mc_steps_{}.png'.format(self.save_folder, i, j, self.n_steps))
         plt.close(fig)
 
+    def slice_all(self, levels={0: 0., 1: 0., 2: 0.}, eps=0.1):
+        for i in range(3):
+            dims =  [(i+1)%3, (i+2)%3]
+            self.slice2D(dims=dims, levels={i: levels[i]}, eps=eps)
+    
+
 
 
 class FKSimGrid3_2:

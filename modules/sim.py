@@ -265,7 +265,7 @@ class MCProb:
         x = np.linspace(self.grid.mins[i], self.grid.maxs[i], num=self.n_subdivs)
         y = np.linspace(self.grid.mins[j], self.grid.maxs[j], num=self.n_subdivs)
         prob = np.zeros((self.n_subdivs, self.n_subdivs))
-        coords = ((pts - self.grid.mins) / self.grid.h).astype(int)
+        coords = ((pts - self.grid.mins) / self.grid.h).astype(i)
         boxes, counts = np.unique(coords[:, [i, j]], return_counts=True, axis=0)
         
 
@@ -910,7 +910,123 @@ class PlotNet3_2:
     @ut.timer
     def plot_all(self, tag):
         for k in range(self.dim):
-            self.heatmap(k, tag)
+            self.heatmap(k, tag) 
+
+
+
+class FKSlice2:
+    """
+    Description: Feynman-Kac simulation for a 2D grid taking integration 
+    in the other dimension into consideration
+    """
+    def __init__(self, save_folder, n_subdivs, mu, sigma, n_theta, grid,\
+                h0, dim, dtype='float32') -> None:
+        self.grid = grid 
+        self.mu = mu 
+        self.sigma = sigma
+        self.n_theta = n_theta
+        self.n_subdivs = n_subdivs         
+        self.h0 = h0
+        self.dtype = dtype
+        self.save_folder = save_folder
+        self.dim = dim
+        
+
+    @ut.timer
+    def propagate(self, n_steps, dt, n_repeats, levels):
+        """
+        Description: propagates particles according to the SDE and stores the final positions
+
+        Args:
+            n_steps: number of steps in Euler-Maruyama
+            dt: time-step in Euler-Maruyama
+            n_repeats: number of simulations per grid point
+            levels: dict specifying fixed levels
+        """
+        i, j = sorted(set(range(self.dim)) - set(levels.keys()))
+        x = np.linspace(self.grid.mins[i], self.grid.maxs[i], num=self.n_subdivs).astype(self.dtype)
+        y = np.linspace(self.grid.mins[j], self.grid.maxs[j], num=self.n_subdivs).astype(self.dtype)
+        
+
+        x, y = np.meshgrid(x, y, indexing='ij')
+        x = x.reshape(-1, 1)
+        y = y.reshape(-1, 1)
+        z = [value * np.ones_like(x) for key, value in levels.items()]
+
+        X0 = tf.concat([e for _, e in sorted(zip([i, j] + list(levels.keys()), [x, y] + z))], axis=-1)
+        X = tf.repeat(X0, n_repeats, axis=0)
+        n_particles = len(X)
+        self.n_steps = n_steps
+        self.final_time = dt * n_steps
+
+
+        start = time.time()
+        for step in range(n_steps):
+            X +=  self.mu(X) * dt + self.sigma * np.random.normal(scale=np.sqrt(dt), size=(n_particles, self.dim))
+            if step%1 == 0:
+                print('step = {}, time taken = {:.4f}'.format(step, time.time() - start), end='\r')
+
+        pd.DataFrame(X0.numpy()).to_csv('{}/{}{}0.csv'.format(self.save_folder, i, j), index=None, header=None)
+        pd.DataFrame(X.numpy()).to_csv('{}/{}{}T_rep_{}_steps_{}.csv'.format(self.save_folder, i, j, n_repeats, n_steps), index=None, header=None)
+    
+    
+
+    @ut.timer
+    def compile(self, n_repeats, levels):
+        i, j = sorted(set(range(self.dim)) - set(levels.keys()))
+        x = np.linspace(self.grid.mins[i], self.grid.maxs[i], num=self.n_subdivs).astype(self.dtype)
+        y = np.linspace(self.grid.mins[j], self.grid.maxs[j], num=self.n_subdivs).astype(self.dtype)
+        x, y = np.meshgrid(x, y)
+        x = x.reshape(-1, 1)
+        y = y.reshape(-1, 1)
+     
+        n_particles = self.n_subdivs * self.n_subdivs
+
+        
+        letters = ['x', 'y', 'z']
+        start = time.time()
+       
+        z = [value * np.ones_like(x) for key, value in levels.items()]
+        X = np.genfromtxt('{}/{}{}T_rep_{}_steps_{}.csv'.format(self.save_folder, i, j, n_repeats, self.n_steps), delimiter=',', dtype=self.dtype)
+        h0 = self.h0(X).reshape((n_particles, n_repeats))
+        h = np.sum(h0, axis=-1) / n_repeats
+        X0 = np.genfromtxt('{}/{}{}0.csv'.format(self.save_folder, i, j), delimiter=',', dtype=self.dtype)
+        p_inf = tf.exp(self.n_theta(*tf.split(X0, X0.shape[-1], axis=-1))).numpy().flatten()
+        p = h * p_inf
+        if p.sum() > 0.:
+            p /= p.sum()
+        pd.DataFrame(p).to_csv('{}/p_{}_{}.csv'.format(self.save_folder, i, j), index=None, header=None)
+
+        grid = (self.n_subdivs, self.n_subdivs)
+        x = x.reshape(grid)
+        y = y.reshape(grid)
+        p = p.reshape(grid)
+
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111)
+        im = ax.pcolormesh(x, y, p, cmap='inferno', shading='auto')
+        ax.set_xlabel(r'$x_{}$'.format(i))
+        ax.set_ylabel(r'$x_{}$'.format(j))
+        condition = ''
+        num_cond = len(levels.items())
+        for idx, item in enumerate(levels.items()):
+            condition += 'x_{}={}'.format(item[0], item[1])
+            if idx + 1 < num_cond:
+                condition += ','
+
+        ax.set_title(r'$p(x_{}, x_{} | {})$ at time = {:.4f}'.format(i, j, condition, self.final_time))
+        fig.colorbar(im)
+        plt.savefig('{}/p_slice_{}_{}_steps_{}.png'.format(self.save_folder, i, j, self.n_steps))
+
+    @ut.timer
+    def propagate_and_compile(self, n_steps, dt, n_repeats, levels):
+        self.propagate(n_steps, dt, n_repeats, levels)
+        self.compile(n_repeats, levels)
+
+    # @ut.timer
+    # def compute_all(self, n_steps, dt, n_repeats, levels={0: 0., 1: 0., 2: 0.}):
+    #     for k in range(3):
+    #         self.propagate_and_compile(n_steps, dt, n_repeats, k, levels[k])
 
 
 

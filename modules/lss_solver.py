@@ -7,13 +7,15 @@ import csv
 
 class LogSteadyStateSolver:
 
-    def __init__(self, num_nodes, num_blocks, dtype, name, diff_log_op, optimizer, domain) -> None:
+    def __init__(self, num_nodes, num_blocks, dtype, name, diff_log_op, optimizer, domain, model_path=None) -> None:
         self.net =  arch.LSTMForgetNet(num_nodes, num_blocks, dtype, name)
         self.diff_log_op = diff_log_op 
         self.domain = domain
         self.dim = len(domain[0])
         self.dtype = dtype
-        self.optimizer = optimizer 
+        self.optimizer = optimizer
+        if model_path is not None:
+            self.net.load_weights(model_path).expect_partial()
 
     def sampler(self, n_sample, domain=None):
         if domain is None:

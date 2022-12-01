@@ -17,11 +17,12 @@ def plot_difference_2D(steps, truth, domain, mc_domain, net_path, net_name, num_
         writer = csv.writer(logger)
         for step in steps:
             net.load_weights("{}/{}_{}".format(net_path, net_name, step))
-            Z_mc = (mc_domain[1][0] - mc_domain[0][0]) * (mc_domain[1][1] - mc_domain[0][1]) \
-                   * tf.reduce_mean(tf.exp(net(mc_x, mc_y))).numpy()
-            learned = tf.exp(net(x, y)) / Z_mc
+            # Z_mc = (mc_domain[1][0] - mc_domain[0][0]) * (mc_domain[1][1] - mc_domain[0][1]) \
+            #        * tf.reduce_mean(tf.exp(net(mc_x, mc_y))).numpy()
+            learned = tf.exp(net(x, y)) #/ Z_mc
+            learned = learned / learned.numpy().sum()
             difference = tf.math.reduce_max(tf.abs(true - learned)).numpy()
-            print('step = {}, diff = {}, Z_mc = {}'.format(step, difference, Z_mc))
+            print('step = {}, diff = {}, Z_mc = {}'.format(step, difference, None))
             writer.writerow([difference])
 
     diff = np.genfromtxt('{}/difference.csv'.format(net_path), delimiter=',')
@@ -39,7 +40,7 @@ def plot_difference_2D(steps, truth, domain, mc_domain, net_path, net_name, num_
     ax1 = fig.add_subplot(122)
     ax.plot(steps, diff, label='sup norm')
     #ax.plot(steps, loss, label='loss')
-    ax1.scatter(diff, loss)
+    ax1.scatter(loss, diff)
     ax.set_xlabel('training iteration')
     ax1.set_ylabel('difference')
     ax1.set_xlabel('loss')

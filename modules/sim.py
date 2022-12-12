@@ -265,7 +265,7 @@ class MCProb:
         x = np.linspace(self.grid.mins[i], self.grid.maxs[i], num=self.n_subdivs)
         y = np.linspace(self.grid.mins[j], self.grid.maxs[j], num=self.n_subdivs)
         prob = np.zeros((self.n_subdivs, self.n_subdivs))
-        coords = ((pts - self.grid.mins) / self.grid.h).astype(i)
+        coords = ((pts - self.grid.mins) / self.grid.h).astype('float32')
         boxes, counts = np.unique(coords[:, [i, j]], return_counts=True, axis=0)
         
 
@@ -1014,7 +1014,7 @@ class FKSlice2:
             if idx + 1 < num_cond:
                 condition += ','
 
-        ax.set_title(r'$p(x_{}, x_{} | {})$ at time = {:.4f}'.format(i, j, condition, self.final_time))
+        ax.set_title(r'$p(x_{}, x_{}, {})$ at time = {:.4f}'.format(i, j, condition, self.final_time))
         fig.colorbar(im)
         plt.savefig('{}/p_slice_{}_{}_steps_{}.png'.format(self.save_folder, i, j, self.n_steps))
 

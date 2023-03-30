@@ -237,6 +237,23 @@ class MCProb:
             for j in range(i+1, self.dim):
                 self.compute_p2(i, j)
 
+    @ut.timer
+    def compute_all_wo_prop(self, n_steps, dt, lims=None):
+        """
+        Description: Computes all d, 2 and 1 dimensional densities
+
+        Args:
+            n_steps: number of steps in Euler-Maruyama
+            dt: time-step in Euler-Maruyama
+        """
+        self.set_grid(lims)
+        self.assign_pts()
+        self.compute_pd()
+        for i in range(self.dim):
+            self.compute_p1(i)
+            for j in range(i+1, self.dim):
+                self.compute_p2(i, j)
+
 
 
     @ut.timer
